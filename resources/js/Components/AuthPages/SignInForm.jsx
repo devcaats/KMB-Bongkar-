@@ -5,6 +5,7 @@ import Label from "../form/Label";
 import Input from "../form/input/InputField";
 import Checkbox from "../form/input/Checkbox";
 import Button from "../ui/button/Button.jsx";
+import Alert from "../ui/alert/alert";
 
 export default function SignInForm() {
     const { data, setData, post, processing, errors, reset } = useForm({
@@ -97,6 +98,14 @@ export default function SignInForm() {
                     <div>
                         <form onSubmit={handleSubmit}>
                             <div className="space-y-6">
+                                {errors.email && (
+                                    <Alert
+                                        variant="error"
+                                        title="Login Gagal"
+                                        message="Email atau password salah. Silakan coba lagi."
+                                        showLink={false}
+                                    />
+                                )}
                                 <div>
                                     <Label>
                                         Email{" "}
@@ -110,7 +119,7 @@ export default function SignInForm() {
                                         value={data.email}
                                         onChange={handleEmailChange}
                                         error={!!emailError || !!errors.email}
-                                        hint={emailError || errors.email}
+                                        hint={emailError}
                                     />
                                 </div>
                                 <div>
@@ -152,7 +161,7 @@ export default function SignInForm() {
                                         </span>
                                     </div>
                                 </div>
-                                <div className="flex items-center justify-between">
+                                {/* <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-3">
                                         <Checkbox
                                             checked={data.remember}
@@ -164,13 +173,13 @@ export default function SignInForm() {
                                             Keep me logged in
                                         </span>
                                     </div>
-                                    {/* <Link
+                                    <Link
                                         href="/reset-password"
                                         className="text-sm text-black hover:text-brand-600 text-theme-sm dark:text-white"
                                     >
                                         Forgot password?
-                                    </Link> */}
-                                </div>
+                                    </Link>
+                                </div> */}
                                 <div>
                                     <Button
                                         className="w-full"
@@ -185,13 +194,14 @@ export default function SignInForm() {
 
                         <div className="mt-5">
                             <p className="text-sm font-normal text-center text-gray-700 dark:text-gray-400 sm:text-start">
-                                Don&apos;t have an account? {""}
-                                <Link
+                                Jika belum punya akun silahkan buat akun ke
+                                Staff KMB
+                                {/* <Link
                                     href="/register"
                                     className="text-brand-500 hover:text-brand-600 dark:text-brand-400"
                                 >
                                     Sign Up
-                                </Link>
+                                </Link> */}
                             </p>
                         </div>
                     </div>

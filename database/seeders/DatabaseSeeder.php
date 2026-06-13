@@ -20,6 +20,25 @@ class DatabaseSeeder extends Seeder
         User::factory()->create([
             'name' => 'Test User',
             'email' => 'test@example.com',
+            'role' => 'admin',
+        ]);
+
+        User::factory()->create([
+            'name' => 'Budi Santoso (Driver)',
+            'email' => 'budi.driver@example.com',
+            'role' => 'driver',
+        ]);
+
+        User::factory()->create([
+            'name' => 'Joko Susilo (Driver)',
+            'email' => 'joko.driver@example.com',
+            'role' => 'driver',
+        ]);
+
+        User::factory()->create([
+            'name' => 'Andi Wijaya (Driver)',
+            'email' => 'andi.driver@example.com',
+            'role' => 'driver',
         ]);
     }
 }

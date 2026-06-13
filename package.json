@@ -22,7 +22,11 @@
         "vite": "^8.0.0"
     },
     "dependencies": {
+        "apexcharts": "^5.15.0",
         "clsx": "^2.1.1",
+        "flatpickr": "^4.6.13",
+        "react-apexcharts": "^2.1.0",
+        "reactjs-popup": "^2.0.6",
         "tailwind-merge": "^3.6.0"
     }
 }
