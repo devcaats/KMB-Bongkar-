@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useMemo } from "react";
 import { Link, usePage } from "@inertiajs/react";
 import { useSidebar } from "../context/SidebarContext";
 import SidebarWidget from "./SidebarWidget";
@@ -34,6 +34,34 @@ const navItems = [
         ),
     },
     {
+        name: "Rincian DO",
+        path: "/rincian-do",
+        icon: (
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                <path
+                    fillRule="evenodd"
+                    clipRule="evenodd"
+                    d="M5 3.25A2.75 2.75 0 002.25 6v12A2.75 2.75 0 005 20.75h14A2.75 2.75 0 0021.75 18V6A2.75 2.75 0 0019 3.25H5zM3.75 8.5V6c0-.69.56-1.25 1.25-1.25h14c.69 0 1.25.56 1.25 1.25v2.5H3.75zm0 1.5V18c0 .69.56 1.25 1.25 1.25h14c.69 0 1.25-.56 1.25-1.25v-8H3.75zM6 13a1 1 0 011-1h3a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7zm7-3a1 1 0 011-1h2a1 1 0 110 2h-2a1 1 0 01-1-1z"
+                    fill="currentColor"
+                />
+            </svg>
+        ),
+    },
+    {
+        name: "Koneksi WA Bot",
+        path: "/wa-bot",
+        icon: (
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                <path
+                    fillRule="evenodd"
+                    clipRule="evenodd"
+                    d="M5.5 3.25A2.25 2.25 0 003.25 5.5v13A2.25 2.25 0 005.5 20.75h13a2.25 2.25 0 002.25-2.25v-13a2.25 2.25 0 00-2.25-2.25h-13zm-.75 2.25a.75.75 0 01.75-.75h13a.75.75 0 01.75.75v13a.75.75 0 01-.75.75h-13a.75.75 0 01-.75-.75v-13zM7 7a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 01-1 1H8a1 1 0 01-1-1V7zm7-1a1 1 0 00-1 1v2a1 1 0 001 1h2a1 1 0 001-1V7a1 1 0 00-1-1h-2zm-7 8a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 01-1 1H8a1 1 0 01-1-1v-2zm7-1a1 1 0 100 2h1v1a1 1 0 102 0v-2a1 1 0 00-1-1h-2z"
+                    fill="currentColor"
+                />
+            </svg>
+        ),
+    },
+    {
         name: "Log Aktivitas",
         path: "/log-aktivitas",
         icon: (
@@ -42,6 +70,20 @@ const navItems = [
                     fillRule="evenodd"
                     clipRule="evenodd"
                     d="M4 5a2 2 0 012-2h12a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm2 0v14h12V5H6zm3 3a1 1 0 011-1h4a1 1 0 110 2h-4a1 1 0 01-1-1zm0 4a1 1 0 011-1h4a1 1 0 110 2h-4a1 1 0 01-1-1zm1 3a1 1 0 100 2h4a1 1 0 100-2H10z"
+                    fill="currentColor"
+                />
+            </svg>
+        ),
+    },
+    {
+        name: "Manajemen User",
+        path: "/users",
+        icon: (
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                <path
+                    fillRule="evenodd"
+                    clipRule="evenodd"
+                    d="M12 4a4 4 0 100 8 4 4 0 000-8zM6 8a6 6 0 1112 0A6 6 0 016 8zm-2 9a4 4 0 014-4h8a4 4 0 014 4v1a1 1 0 11-2 0v-1a2 2 0 00-2-2H8a2 2 0 00-2 2v1a1 1 0 11-2 0v-1z"
                     fill="currentColor"
                 />
             </svg>
@@ -149,7 +191,72 @@ const MenuBadge = ({ isActive }) => (
 // ─── Main Component ─────────────────────────────────────────────────────────
 const AppSidebar = () => {
     const { isExpanded, isMobileOpen, isHovered, setIsHovered } = useSidebar();
-    const { url } = usePage();
+    const { url, props } = usePage();
+    const user = props.auth.user;
+
+    const dynamicNavItems = useMemo(() => {
+        if (user?.role === "driver") {
+            return [
+                {
+                    name: "Dashboard",
+                    path: "/dashboard",
+                    icon: (
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                            <path
+                                fillRule="evenodd"
+                                clipRule="evenodd"
+                                d="M5.5 3.25C4.25736 3.25 3.25 4.25736 3.25 5.5V8.99998C3.25 10.2426 4.25736 11.25 5.5 11.25H9C10.2426 11.25 11.25 10.2426 11.25 8.99998V5.5C11.25 4.25736 10.2426 3.25 9 3.25H5.5ZM4.75 5.5C4.75 5.08579 5.08579 4.75 5.5 4.75H9C9.41421 4.75 9.75 5.08579 9.75 5.5V8.99998C9.75 9.41419 9.41421 9.74998 9 9.74998H5.5C5.08579 9.74998 4.75 9.41419 4.75 8.99998V5.5ZM5.5 12.75C4.25736 12.75 3.25 13.7574 3.25 15V18.5C3.25 19.7426 4.25736 20.75 5.5 20.75H9C10.2426 20.75 11.25 19.7427 11.25 18.5V15C11.25 13.7574 10.2426 12.75 9 12.75H5.5ZM15 3.25C13.7574 3.25 12.75 4.25736 12.75 5.5V8.99998C12.75 10.2426 13.7574 11.25 15 11.25H18.5C19.7426 11.25 20.75 10.2426 20.75 8.99998V5.5C20.75 4.25736 19.7426 3.25 18.5 3.25H15ZM15 12.75C13.7574 12.75 12.75 13.7574 12.75 15V18.5C12.75 19.7426 13.7574 20.75 15 20.75H18.5C19.7426 20.75 20.75 19.7427 20.75 18.5V15C20.75 13.7574 19.7426 12.75 18.5 12.75H15Z"
+                                fill="currentColor"
+                            />
+                        </svg>
+                    ),
+                },
+                {
+                    name: "Laporan Muat",
+                    path: "/laporan-muat",
+                    icon: (
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                            <path
+                                fillRule="evenodd"
+                                clipRule="evenodd"
+                                d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"
+                                fill="currentColor"
+                            />
+                        </svg>
+                    ),
+                },
+                {
+                    name: "Laporan Bongkar",
+                    path: "/laporan-bongkar",
+                    icon: (
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                            <path
+                                fillRule="evenodd"
+                                clipRule="evenodd"
+                                d="M19 14l-7 7m0 0l-7-7m7 7V3"
+                                fill="currentColor"
+                            />
+                        </svg>
+                    ),
+                },
+                {
+                    name: "Maintenance Unit",
+                    path: "/maintenance-unit",
+                    icon: (
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                            <path
+                                fillRule="evenodd"
+                                clipRule="evenodd"
+                                d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.757.426 1.757 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.757-2.924 1.757-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.757-.426-1.757-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                                fill="currentColor"
+                            />
+                        </svg>
+                    ),
+                },
+            ];
+        }
+        return navItems;
+    }, [user]);
 
     const [openSubmenu, setOpenSubmenu] = useState(null);
     const [subMenuHeight, setSubMenuHeight] = useState({});
@@ -168,7 +275,7 @@ const AppSidebar = () => {
     useEffect(() => {
         let matched = false;
         ["main", "others"].forEach((menuType) => {
-            const items = menuType === "main" ? navItems : othersItems;
+            const items = menuType === "main" ? dynamicNavItems : othersItems;
             items.forEach((nav, index) => {
                 if (nav.subItems) {
                     nav.subItems.forEach((sub) => {
@@ -181,7 +288,7 @@ const AppSidebar = () => {
             });
         });
         if (!matched) setOpenSubmenu(null);
-    }, [url, isActive]);
+    }, [url, isActive, dynamicNavItems]);
 
     // Measure submenu height for animation
     useEffect(() => {
@@ -330,7 +437,7 @@ const AppSidebar = () => {
                     <div className="flex flex-col gap-4">
                         {/* Main Menu */}
                         <div>
-                            {renderMenuItems(navItems, "main")}
+                            {renderMenuItems(dynamicNavItems, "main")}
                         </div>
                     </div>
                 </nav>

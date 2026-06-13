@@ -35,4 +35,18 @@ return [
         ],
     ],
 
+    'whatsapp_bot' => [
+        'base_url' => env('WHATSAPP_BOT_BASE_URL'),
+        'url' => env('WHATSAPP_BOT_URL'),
+        'recipient' => env('WHATSAPP_BOT_RECIPIENT'),
+        'token' => env('WHATSAPP_BOT_TOKEN'),
+        'number_field' => env('WHATSAPP_BOT_NUMBER_FIELD', 'number'),
+        'message_field' => env('WHATSAPP_BOT_MESSAGE_FIELD', 'message'),
+        'qr_url' => env('WHATSAPP_BOT_QR_URL'),
+        'status_url' => env('WHATSAPP_BOT_STATUS_URL'),
+        'restart_url' => env('WHATSAPP_BOT_RESTART_URL'),
+        'logout_url' => env('WHATSAPP_BOT_LOGOUT_URL'),
+        'events_url' => env('WHATSAPP_BOT_EVENTS_URL'),
+    ],
+
 ];

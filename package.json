@@ -4,7 +4,8 @@
     "type": "module",
     "scripts": {
         "build": "vite build",
-        "dev": "vite"
+        "dev": "vite",
+        "wa:bot": "node wa-bot/server.js"
     },
     "devDependencies": {
         "@headlessui/react": "^2.0.0",
@@ -22,9 +23,13 @@
         "vite": "^8.0.0"
     },
     "dependencies": {
+        "@whiskeysockets/baileys": "^7.0.0-rc13",
         "apexcharts": "^5.15.0",
         "clsx": "^2.1.1",
+        "express": "^5.2.1",
         "flatpickr": "^4.6.13",
+        "pino": "^10.3.1",
+        "qrcode": "^1.5.4",
         "react-apexcharts": "^2.1.0",
         "reactjs-popup": "^2.0.6",
         "tailwind-merge": "^3.6.0"

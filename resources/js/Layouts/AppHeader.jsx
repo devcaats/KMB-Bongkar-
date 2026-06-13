@@ -1,13 +1,15 @@
-import { useEffect, useRef, useState } from "react";
-import { Link } from "@inertiajs/react";
+import { useEffect, useRef, useState, useMemo } from "react";
+import { Link, usePage } from "@inertiajs/react";
 import { useSidebar } from "../context/SidebarContext";
 import { ThemeToggleButton } from "../Components/common/ThemeToggleButton";
-import NotificationDropdown from "../Components/header/NotificationDropdown";
 import UserDropdown from "../Components/header/UserDropdown";
 
 const searchOptions = [
     { name: "Pembuatan DO", path: "/pembuatan-do", description: "Form pembuatan Delivery Order baru" },
+    { name: "Rincian DO", path: "/rincian-do", description: "Rincian Delivery Order lengkap dengan laporan muat dan bongkar" },
+    { name: "Koneksi WA Bot", path: "/wa-bot", description: "Scan barcode WhatsApp untuk memasang bot lewat web" },
     { name: "Log Aktivitas", path: "/log-aktivitas", description: "Riwayat aktivitas penambahan data" },
+    { name: "Manajemen User", path: "/users", description: "Kelola akun admin, driver, dan finance" },
     { name: "Dashboard", path: "/", description: "Halaman utama statistik KMB Bongkar" },
     { name: "Profil Akun", path: "/profile", description: "Pengaturan profil akun Anda" },
     { name: "Data Tables", path: "/data-tables", description: "Halaman demonstrasi data tabel" },
@@ -15,6 +17,9 @@ const searchOptions = [
 ];
 
 const AppHeader = () => {
+    const { props } = usePage();
+    const user = props.auth.user;
+
     const [isApplicationMenuOpen, setApplicationMenuOpen] = useState(false);
     const { isMobileOpen, toggleSidebar, toggleMobileSidebar } = useSidebar();
 
@@ -62,10 +67,28 @@ const AppHeader = () => {
         };
     }, []);
 
+    const dynamicSearchOptions = useMemo(() => {
+        if (user?.role === "driver") {
+            return [
+                { name: "Dashboard", path: "/", description: "Halaman utama driver KMB Bongkar" },
+                { name: "Laporan Muat", path: "/laporan-muat", description: "Form pembuatan laporan muat barang" },
+                { name: "Laporan Bongkar", path: "/laporan-bongkar", description: "Form pembuatan laporan bongkar barang" },
+                { name: "Maintenance Unit", path: "/maintenance-unit", description: "Form pengajuan perbaikan / servis unit" },
+                { name: "Profil Akun", path: "/profile", description: "Pengaturan profil akun Anda" },
+            ];
+        }
+        return [
+            ...searchOptions,
+            { name: "Laporan Muat", path: "/laporan-muat", description: "Form pembuatan laporan muat barang" },
+            { name: "Laporan Bongkar", path: "/laporan-bongkar", description: "Form pembuatan laporan bongkar barang" },
+            { name: "Maintenance Unit", path: "/maintenance-unit", description: "Form pengajuan perbaikan / servis unit" },
+        ];
+    }, [user]);
+
     // Filter search options based on query
     const filteredOptions = searchQuery.trim() === ""
         ? []
-        : searchOptions.filter(opt =>
+        : dynamicSearchOptions.filter(opt =>
             opt.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
             opt.description.toLowerCase().includes(searchQuery.toLowerCase())
           );
@@ -215,7 +238,6 @@ const AppHeader = () => {
                 >
                     <div className="flex items-center gap-2 2xsm:gap-3">
                         <ThemeToggleButton />
-                        <NotificationDropdown />
                     </div>
                     <UserDropdown />
                 </div>
