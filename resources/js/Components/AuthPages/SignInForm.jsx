@@ -61,7 +61,7 @@ export default function SignInForm() {
                         <div className="lg:hidden mb-6 flex flex-col items-center">
                             <Link href="/" className="block mb-3">
                                 <img
-                                    className="h-10 dark:invert"
+                                    className="h-10"
                                     src="/images/shape/logo.svg"
                                     alt="Logo KMB"
                                 />

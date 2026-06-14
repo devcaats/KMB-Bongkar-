@@ -93,7 +93,9 @@ export default function LaporanBongkar({
     // ── Delete ──
     const handleDelete = () => {
         if (!deleteTarget) return;
-        router.delete(route("driver.bongkar.destroy", deleteTarget.id), {
+        router.post(route("driver.bongkar.destroy.post", deleteTarget.id), {
+            _method: "delete",
+        }, {
             preserveState: true,
             onSuccess: () => {
                 setPopupState({
@@ -807,7 +809,7 @@ export default function LaporanBongkar({
                                                     type="button"
                                                     onClick={() =>
                                                         setViewingPhoto(
-                                                            `/storage/${editingReport.photo_required_path}`,
+                                                            editingReport.photo_required_url,
                                                         )
                                                     }
                                                     className="text-[10px] font-bold text-brand-600 hover:text-brand-700 dark:text-brand-400"
@@ -903,7 +905,7 @@ export default function LaporanBongkar({
                                                     type="button"
                                                     onClick={() =>
                                                         setViewingPhoto(
-                                                            `/storage/${editingReport.photo_optional_path}`,
+                                                            editingReport.photo_optional_url,
                                                         )
                                                     }
                                                     className="text-[10px] font-bold text-gray-600 hover:text-gray-800 dark:text-gray-400"
@@ -1197,7 +1199,7 @@ export default function LaporanBongkar({
                                                             type="button"
                                                             onClick={() =>
                                                                 setViewingPhoto(
-                                                                    `/storage/${report.photo_required_path}`,
+                                                                    report.photo_required_url,
                                                                 )
                                                             }
                                                             className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/10 px-2 py-1 rounded-lg w-max"
@@ -1228,7 +1230,7 @@ export default function LaporanBongkar({
                                                             type="button"
                                                             onClick={() =>
                                                                 setViewingPhoto(
-                                                                    `/storage/${report.photo_optional_path}`,
+                                                                    report.photo_optional_url,
                                                                 )
                                                             }
                                                             className="inline-flex items-center gap-1 text-xs font-semibold text-gray-600 hover:text-gray-800 dark:text-gray-400 bg-gray-100 dark:bg-white/[0.04] px-2 py-1 rounded-lg w-max"

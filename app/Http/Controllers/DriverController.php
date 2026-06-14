@@ -3,10 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Models\ActivityLog;
+use App\Models\LoadReport;
+use App\Models\UnloadReport;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class DriverController extends Controller
 {
@@ -15,7 +19,7 @@ class DriverController extends Controller
         $driverId = auth()->id();
         
         // Find reported DO IDs
-        $reportedDoIds = \App\Models\LoadReport::where('driver_id', $driverId)
+        $reportedDoIds = LoadReport::where('driver_id', $driverId)
             ->pluck('delivery_order_id')
             ->toArray();
 
@@ -24,7 +28,7 @@ class DriverController extends Controller
             ->orderBy('created_at', 'desc')
             ->get(['id', 'nomor_do', 'nomor_unit']);
 
-        $reports = \App\Models\LoadReport::where('driver_id', $driverId)
+        $reports = LoadReport::where('driver_id', $driverId)
             ->with('deliveryOrder')
             ->orderBy('created_at', 'desc')
             ->get();
@@ -79,7 +83,7 @@ class DriverController extends Controller
         $netto = $validated['bruto'] - $validated['tara'];
 
         // Save load report
-        \App\Models\LoadReport::create([
+        LoadReport::create([
             'driver_id'           => auth()->id(),
             'delivery_order_id'   => $do->id,
             'load_date'           => $validated['load_date'],
@@ -100,7 +104,7 @@ class DriverController extends Controller
         return back()->with('success', 'Laporan muat berhasil dikirim!');
     }
 
-    public function updateLaporanMuat(Request $request, \App\Models\LoadReport $loadReport): RedirectResponse
+    public function updateLaporanMuat(Request $request, LoadReport $loadReport): RedirectResponse
     {
         if ($loadReport->driver_id !== auth()->id()) {
             abort(403);
@@ -140,7 +144,7 @@ class DriverController extends Controller
         // Handle required photo replacement
         if ($request->hasFile('photo_required')) {
             if ($loadReport->photo_required_path) {
-                \Illuminate\Support\Facades\Storage::disk('public')->delete($loadReport->photo_required_path);
+                Storage::disk('public')->delete($loadReport->photo_required_path);
             }
             $updateData['photo_required_path'] = $request->file('photo_required')->store('reports/loads', 'public');
         }
@@ -148,7 +152,7 @@ class DriverController extends Controller
         // Handle optional photo replacement
         if ($request->hasFile('photo_optional')) {
             if ($loadReport->photo_optional_path) {
-                \Illuminate\Support\Facades\Storage::disk('public')->delete($loadReport->photo_optional_path);
+                Storage::disk('public')->delete($loadReport->photo_optional_path);
             }
             $updateData['photo_optional_path'] = $request->file('photo_optional')->store('reports/loads', 'public');
         }
@@ -164,7 +168,7 @@ class DriverController extends Controller
         return back()->with('success', 'Laporan muat berhasil diperbarui!');
     }
 
-    public function destroyLaporanMuat(\App\Models\LoadReport $loadReport): RedirectResponse
+    public function destroyLaporanMuat(LoadReport $loadReport): RedirectResponse
     {
         if ($loadReport->driver_id !== auth()->id()) {
             abort(403);
@@ -174,10 +178,10 @@ class DriverController extends Controller
 
         // Delete files from storage
         if ($loadReport->photo_required_path) {
-            \Illuminate\Support\Facades\Storage::disk('public')->delete($loadReport->photo_required_path);
+            Storage::disk('public')->delete($loadReport->photo_required_path);
         }
         if ($loadReport->photo_optional_path) {
-            \Illuminate\Support\Facades\Storage::disk('public')->delete($loadReport->photo_optional_path);
+            Storage::disk('public')->delete($loadReport->photo_optional_path);
         }
 
         $loadReport->delete();
@@ -191,18 +195,28 @@ class DriverController extends Controller
         return back()->with('success', 'Laporan muat berhasil dihapus.');
     }
 
+    public function showLaporanMuatPhoto(LoadReport $loadReport, string $type): StreamedResponse
+    {
+        if ($loadReport->driver_id !== auth()->id() && auth()->user()?->role !== 'admin') {
+            abort(403);
+        }
+
+        $path = $this->reportPhotoPath($type, $loadReport->photo_required_path, $loadReport->photo_optional_path);
+
+        return $this->downloadReportPhoto($path);
+    }
 
     public function laporanBongkar(): Response
     {
         $driverId = auth()->id();
 
         // Only show DOs that have an existing load report (so netto muat is known)
-        $reportedDoIds = \App\Models\LoadReport::where('driver_id', $driverId)
+        $reportedDoIds = LoadReport::where('driver_id', $driverId)
             ->pluck('delivery_order_id')
             ->toArray();
 
         // Also exclude DOs that already have an unload report
-        $unloadedDoIds = \App\Models\UnloadReport::where('driver_id', $driverId)
+        $unloadedDoIds = UnloadReport::where('driver_id', $driverId)
             ->pluck('delivery_order_id')
             ->toArray();
 
@@ -214,14 +228,14 @@ class DriverController extends Controller
             ->get(['id', 'nomor_do', 'nomor_unit']);
 
         // Load reports to retrieve netto muat per DO (for selisih calculation)
-        $loadReports = \App\Models\LoadReport::where('driver_id', $driverId)
+        $loadReports = LoadReport::where('driver_id', $driverId)
             ->whereIn('delivery_order_id', $reportedDoIds)
             ->get(['delivery_order_id', 'netto']);
 
         $nettoMuatByDo = $loadReports->keyBy('delivery_order_id')->map(fn($r) => $r->netto);
 
         // Unload reports history
-        $reports = \App\Models\UnloadReport::where('driver_id', $driverId)
+        $reports = UnloadReport::where('driver_id', $driverId)
             ->with('deliveryOrder')
             ->orderBy('created_at', 'desc')
             ->get();
@@ -269,7 +283,7 @@ class DriverController extends Controller
         $netto = $validated['bruto'] - $validated['tara'];
 
         // Get netto muat from existing load report
-        $loadReport = \App\Models\LoadReport::where('driver_id', $driverId)
+        $loadReport = LoadReport::where('driver_id', $driverId)
             ->where('delivery_order_id', $do->id)
             ->firstOrFail();
 
@@ -281,7 +295,7 @@ class DriverController extends Controller
             ? $request->file('photo_optional')->store('reports/unloads', 'public')
             : null;
 
-        \App\Models\UnloadReport::create([
+        UnloadReport::create([
             'driver_id'           => $driverId,
             'delivery_order_id'   => $do->id,
             'unload_date'         => $validated['unload_date'],
@@ -304,7 +318,7 @@ class DriverController extends Controller
         return back()->with('success', 'Laporan bongkar berhasil dikirim!');
     }
 
-    public function updateLaporanBongkar(Request $request, \App\Models\UnloadReport $unloadReport): RedirectResponse
+    public function updateLaporanBongkar(Request $request, UnloadReport $unloadReport): RedirectResponse
     {
         if ($unloadReport->driver_id !== auth()->id()) {
             abort(403);
@@ -326,7 +340,7 @@ class DriverController extends Controller
 
         $netto = $validated['bruto'] - $validated['tara'];
 
-        $loadReport = \App\Models\LoadReport::where('driver_id', auth()->id())
+        $loadReport = LoadReport::where('driver_id', auth()->id())
             ->where('delivery_order_id', $unloadReport->delivery_order_id)
             ->firstOrFail();
 
@@ -345,14 +359,14 @@ class DriverController extends Controller
 
         if ($request->hasFile('photo_required')) {
             if ($unloadReport->photo_required_path) {
-                \Illuminate\Support\Facades\Storage::disk('public')->delete($unloadReport->photo_required_path);
+                Storage::disk('public')->delete($unloadReport->photo_required_path);
             }
             $updateData['photo_required_path'] = $request->file('photo_required')->store('reports/unloads', 'public');
         }
 
         if ($request->hasFile('photo_optional')) {
             if ($unloadReport->photo_optional_path) {
-                \Illuminate\Support\Facades\Storage::disk('public')->delete($unloadReport->photo_optional_path);
+                Storage::disk('public')->delete($unloadReport->photo_optional_path);
             }
             $updateData['photo_optional_path'] = $request->file('photo_optional')->store('reports/unloads', 'public');
         }
@@ -368,7 +382,7 @@ class DriverController extends Controller
         return back()->with('success', 'Laporan bongkar berhasil diperbarui!');
     }
 
-    public function destroyLaporanBongkar(\App\Models\UnloadReport $unloadReport): RedirectResponse
+    public function destroyLaporanBongkar(UnloadReport $unloadReport): RedirectResponse
     {
         if ($unloadReport->driver_id !== auth()->id()) {
             abort(403);
@@ -377,10 +391,10 @@ class DriverController extends Controller
         $doNumber = $unloadReport->deliveryOrder->nomor_do;
 
         if ($unloadReport->photo_required_path) {
-            \Illuminate\Support\Facades\Storage::disk('public')->delete($unloadReport->photo_required_path);
+            Storage::disk('public')->delete($unloadReport->photo_required_path);
         }
         if ($unloadReport->photo_optional_path) {
-            \Illuminate\Support\Facades\Storage::disk('public')->delete($unloadReport->photo_optional_path);
+            Storage::disk('public')->delete($unloadReport->photo_optional_path);
         }
 
         $unloadReport->delete();
@@ -392,6 +406,17 @@ class DriverController extends Controller
         ]);
 
         return back()->with('success', 'Laporan bongkar berhasil dihapus.');
+    }
+
+    public function showLaporanBongkarPhoto(UnloadReport $unloadReport, string $type): StreamedResponse
+    {
+        if ($unloadReport->driver_id !== auth()->id() && auth()->user()?->role !== 'admin') {
+            abort(403);
+        }
+
+        $path = $this->reportPhotoPath($type, $unloadReport->photo_required_path, $unloadReport->photo_optional_path);
+
+        return $this->downloadReportPhoto($path);
     }
 
     public function maintenanceUnit(): Response
@@ -420,5 +445,27 @@ class DriverController extends Controller
         ]);
 
         return back()->with('success', 'Laporan maintenance berhasil dikirim!');
+    }
+
+    private function reportPhotoPath(string $type, ?string $requiredPath, ?string $optionalPath): string
+    {
+        $path = match ($type) {
+            'required' => $requiredPath,
+            'optional' => $optionalPath,
+            default => null,
+        };
+
+        abort_if(blank($path), 404);
+
+        return $path;
+    }
+
+    private function downloadReportPhoto(string $path): StreamedResponse
+    {
+        abort_unless(Storage::disk('public')->exists($path), 404);
+
+        return Storage::disk('public')->response($path, null, [
+            'Cache-Control' => 'private, max-age=3600',
+        ]);
     }
 }

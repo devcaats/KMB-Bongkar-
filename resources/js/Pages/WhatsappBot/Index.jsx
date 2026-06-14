@@ -427,6 +427,8 @@ export default function WhatsappBotIndex({ botConfig }) {
                         <div className="rounded-lg border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900">
                             <p className="text-sm font-semibold uppercase text-brand-500">Konfigurasi</p>
                             <div className="mt-4 space-y-2">
+                                <ConfigRow label="Failover Server" enabled={botConfig?.failoverEnabled} />
+                                <ConfigRow label="Server Cadangan" enabled={botConfig?.hasSecondaryUrl} />
                                 <ConfigRow label="Base URL" enabled={botConfig?.hasBaseUrl} />
                                 <ConfigRow label="QR Endpoint" enabled={botConfig?.hasQrUrl} />
                                 <ConfigRow label="Status Endpoint" enabled={botConfig?.hasStatusUrl} />

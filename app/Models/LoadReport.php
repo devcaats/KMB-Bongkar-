@@ -27,6 +27,25 @@ class LoadReport extends Model
         'notes',
     ];
 
+    protected $appends = [
+        'photo_required_url',
+        'photo_optional_url',
+    ];
+
+    public function getPhotoRequiredUrlAttribute(): ?string
+    {
+        return $this->photo_required_path
+            ? route('driver.muat.photo', [$this, 'required'], false)
+            : null;
+    }
+
+    public function getPhotoOptionalUrlAttribute(): ?string
+    {
+        return $this->photo_optional_path
+            ? route('driver.muat.photo', [$this, 'optional'], false)
+            : null;
+    }
+
     /**
      * Get the driver that submitted the load report.
      */

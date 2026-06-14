@@ -5,15 +5,16 @@ namespace App\Http\Controllers;
 use App\Models\ActivityLog;
 use App\Models\DeliveryOrder;
 use App\Models\User;
-use Illuminate\Http\Client\ConnectionException;
+use App\Services\WhatsappBotService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Http;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class RincianDeliveryOrderController extends Controller
 {
+    public function __construct(private readonly WhatsappBotService $botService) {}
+
     public function index(): Response
     {
         $orders = $this->ordersQuery()
@@ -36,24 +37,24 @@ class RincianDeliveryOrderController extends Controller
             abort(403);
         }
 
-        if (!$this->isComplete($deliveryOrder)) {
+        if (! $this->isComplete($deliveryOrder)) {
             return back()->with('error', 'Rincian DO belum lengkap. Laporan muat dan bongkar wajib tersedia sebelum dikirim ke WA.');
         }
 
         $recipient = $this->resolveWhatsappRecipient($request);
         $result = $this->sendWhatsappMessage($this->buildWhatsappMessage($deliveryOrder), $recipient->nohp);
 
-        if (!$result['ok']) {
+        if (! $result['ok']) {
             return back()->with('error', $result['message']);
         }
 
         ActivityLog::create([
             'user_id' => auth()->id(),
             'activity' => 'Kirim Rincian DO ke WA',
-            'details' => 'Mengirim rincian DO #' . $deliveryOrder->nomor_do . ' ke ' . $recipient->name . ' (' . $recipient->nohp . ').',
+            'details' => 'Mengirim rincian DO #'.$deliveryOrder->nomor_do.' ke '.$recipient->name.' ('.$recipient->nohp.').',
         ]);
 
-        return back()->with('success', 'Rincian DO #' . $deliveryOrder->nomor_do . ' berhasil dikirim ke WA ' . $recipient->name . '.');
+        return back()->with('success', 'Rincian DO #'.$deliveryOrder->nomor_do.' berhasil dikirim ke WA '.$recipient->name.'.');
     }
 
     public function sendAllCompleteToWhatsapp(Request $request): RedirectResponse
@@ -74,17 +75,17 @@ class RincianDeliveryOrderController extends Controller
         $recipient = $this->resolveWhatsappRecipient($request);
         $result = $this->sendWhatsappMessage($message, $recipient->nohp);
 
-        if (!$result['ok']) {
+        if (! $result['ok']) {
             return back()->with('error', $result['message']);
         }
 
         ActivityLog::create([
             'user_id' => auth()->id(),
             'activity' => 'Kirim Semua Rincian DO ke WA',
-            'details' => 'Mengirim ' . $orders->count() . ' rincian DO lengkap ke ' . $recipient->name . ' (' . $recipient->nohp . ').',
+            'details' => 'Mengirim '.$orders->count().' rincian DO lengkap ke '.$recipient->name.' ('.$recipient->nohp.').',
         ]);
 
-        return back()->with('success', $orders->count() . ' rincian DO lengkap berhasil dikirim ke WA ' . $recipient->name . '.');
+        return back()->with('success', $orders->count().' rincian DO lengkap berhasil dikirim ke WA '.$recipient->name.'.');
     }
 
     private function ordersQuery()
@@ -140,31 +141,31 @@ class RincianDeliveryOrderController extends Controller
 
         return implode("\n", [
             '*Rincian Delivery Order*',
-            'Nomor DO: ' . $order->nomor_do,
-            'Driver: ' . ($order->driver?->name ?? '-'),
-            'Nomor Unit: ' . $order->nomor_unit,
-            'Tanggal DO: ' . optional($order->created_at)->format('d/m/Y H:i'),
-            'Uang Jalan: Rp ' . number_format((float) $order->uang_jalan, 0, ',', '.'),
+            'Nomor DO: '.$order->nomor_do,
+            'Driver: '.($order->driver?->name ?? '-'),
+            'Nomor Unit: '.$order->nomor_unit,
+            'Tanggal DO: '.optional($order->created_at)->format('d/m/Y H:i'),
+            'Uang Jalan: Rp '.number_format((float) $order->uang_jalan, 0, ',', '.'),
             '',
             '*Laporan Muat*',
-            'Tanggal Muat: ' . $load->load_date,
-            'Bruto: ' . number_format((float) $load->bruto, 0, ',', '.') . ' kg',
-            'Tara: ' . number_format((float) $load->tara, 0, ',', '.') . ' kg',
-            'Netto Muat: ' . number_format((float) $load->netto, 0, ',', '.') . ' kg',
+            'Tanggal Muat: '.$load->load_date,
+            'Bruto: '.number_format((float) $load->bruto, 0, ',', '.').' kg',
+            'Tara: '.number_format((float) $load->tara, 0, ',', '.').' kg',
+            'Netto Muat: '.number_format((float) $load->netto, 0, ',', '.').' kg',
             '',
             '*Laporan Bongkar*',
-            'Tanggal Bongkar: ' . $unload->unload_date,
-            'Bruto: ' . number_format((float) $unload->bruto, 0, ',', '.') . ' kg',
-            'Tara: ' . number_format((float) $unload->tara, 0, ',', '.') . ' kg',
-            'Netto Bongkar: ' . number_format((float) $unload->netto, 0, ',', '.') . ' kg',
-            'Selisih: ' . ($selisih > 0 ? '+' : '') . number_format($selisih, 0, ',', '.') . ' kg',
-            'Status: ' . strtoupper($unload->status_selisih),
+            'Tanggal Bongkar: '.$unload->unload_date,
+            'Bruto: '.number_format((float) $unload->bruto, 0, ',', '.').' kg',
+            'Tara: '.number_format((float) $unload->tara, 0, ',', '.').' kg',
+            'Netto Bongkar: '.number_format((float) $unload->netto, 0, ',', '.').' kg',
+            'Selisih: '.($selisih > 0 ? '+' : '').number_format($selisih, 0, ',', '.').' kg',
+            'Status: '.strtoupper($unload->status_selisih),
         ]);
     }
 
     private function whatsappConfigured(): bool
     {
-        return filled(config('services.whatsapp_bot.url'));
+        return $this->botService->hasSendEndpoint();
     }
 
     private function whatsappRecipients()
@@ -203,44 +204,6 @@ class RincianDeliveryOrderController extends Controller
 
     private function sendWhatsappMessage(string $message, string $recipientNumber): array
     {
-        if (!$this->whatsappConfigured()) {
-            return [
-                'ok' => false,
-                'message' => 'Bot WA belum dikonfigurasi. Isi WHATSAPP_BOT_URL di file .env.',
-            ];
-        }
-
-        $numberField = config('services.whatsapp_bot.number_field', 'number');
-        $messageField = config('services.whatsapp_bot.message_field', 'message');
-        $token = config('services.whatsapp_bot.token');
-
-        $request = Http::timeout(15)
-            ->acceptJson()
-            ->asJson();
-
-        if (filled($token)) {
-            $request = $request->withToken($token);
-        }
-
-        try {
-            $response = $request->post(config('services.whatsapp_bot.url'), [
-                $numberField => $recipientNumber,
-                $messageField => $message,
-            ]);
-        } catch (ConnectionException $exception) {
-            return [
-                'ok' => false,
-                'message' => 'Gagal menghubungi bot WA: ' . $exception->getMessage(),
-            ];
-        }
-
-        if ($response->failed()) {
-            return [
-                'ok' => false,
-                'message' => 'Bot WA menolak request. Status HTTP: ' . $response->status(),
-            ];
-        }
-
-        return ['ok' => true, 'message' => 'ok'];
+        return $this->botService->sendMessage($message, $recipientNumber);
     }
 }

@@ -36,6 +36,7 @@ return [
     ],
 
     'whatsapp_bot' => [
+        'failover_enabled' => env('WHATSAPP_BOT_FAILOVER_ENABLED', false),
         'base_url' => env('WHATSAPP_BOT_BASE_URL'),
         'url' => env('WHATSAPP_BOT_URL'),
         'recipient' => env('WHATSAPP_BOT_RECIPIENT'),
@@ -47,6 +48,14 @@ return [
         'restart_url' => env('WHATSAPP_BOT_RESTART_URL'),
         'logout_url' => env('WHATSAPP_BOT_LOGOUT_URL'),
         'events_url' => env('WHATSAPP_BOT_EVENTS_URL'),
+        'secondary_base_url' => env('WHATSAPP_BOT_SECONDARY_BASE_URL'),
+        'secondary_url' => env('WHATSAPP_BOT_SECONDARY_URL'),
+        'secondary_token' => env('WHATSAPP_BOT_SECONDARY_TOKEN'),
+        'secondary_qr_url' => env('WHATSAPP_BOT_SECONDARY_QR_URL'),
+        'secondary_status_url' => env('WHATSAPP_BOT_SECONDARY_STATUS_URL'),
+        'secondary_restart_url' => env('WHATSAPP_BOT_SECONDARY_RESTART_URL'),
+        'secondary_logout_url' => env('WHATSAPP_BOT_SECONDARY_LOGOUT_URL'),
+        'secondary_events_url' => env('WHATSAPP_BOT_SECONDARY_EVENTS_URL'),
     ],
 
 ];

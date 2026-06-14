@@ -2,16 +2,16 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Client\ConnectionException;
+use App\Services\WhatsappBotService;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Http;
 use Inertia\Inertia;
 use Inertia\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class WhatsappBotController extends Controller
 {
+    public function __construct(private readonly WhatsappBotService $botService) {}
+
     public function index(): Response
     {
         $this->authorizeAdmin();
@@ -19,19 +19,23 @@ class WhatsappBotController extends Controller
         // For SSE, point directly to the bot service's /events endpoint.
         // This avoids blocking PHP's single-threaded built-in server.
         // The bot already has CORS headers (Access-Control-Allow-Origin: *).
-        $botEventsUrl = $this->endpoint('events');
+        $botEventsUrl = $this->botService->primaryEndpointUrl('events');
 
         return Inertia::render('WhatsappBot/Index', [
             'botConfig' => [
-                'hasBaseUrl'    => filled(config('services.whatsapp_bot.base_url')),
-                'hasQrUrl'      => filled($this->endpoint('qr')),
-                'hasStatusUrl'  => filled($this->endpoint('status')),
-                'hasRestartUrl' => filled($this->endpoint('restart')),
-                'hasLogoutUrl'  => filled($this->endpoint('logout')),
-                'hasSendUrl'    => filled(config('services.whatsapp_bot.url')),
+                'failoverEnabled' => $this->botService->failoverEnabled(),
+                'serverCount' => $this->botService->configuredServerCount(),
+                'hasBaseUrl' => $this->botService->hasBaseUrl(),
+                'hasSecondaryUrl' => $this->botService->hasSecondaryBaseUrl()
+                    || $this->botService->hasSecondarySendEndpoint(),
+                'hasQrUrl' => $this->botService->hasEndpoint('qr'),
+                'hasStatusUrl' => $this->botService->hasEndpoint('status'),
+                'hasRestartUrl' => $this->botService->hasEndpoint('restart'),
+                'hasLogoutUrl' => $this->botService->hasEndpoint('logout'),
+                'hasSendUrl' => $this->botService->hasSendEndpoint(),
                 // Direct URL to bot SSE stream (browser connects directly, no PHP proxy needed)
-                'eventsUrl'     => $botEventsUrl,
-                'recipient'     => config('services.whatsapp_bot.recipient'),
+                'eventsUrl' => $botEventsUrl,
+                'recipient' => config('services.whatsapp_bot.recipient'),
             ],
         ]);
     }
@@ -40,9 +44,9 @@ class WhatsappBotController extends Controller
     {
         $this->authorizeAdmin();
 
-        $result = $this->botRequest('get', $this->endpoint('status'));
+        $result = $this->botService->getEndpoint('status');
 
-        if (!$result['ok']) {
+        if (! $result['ok']) {
             return response()->json($result, 422);
         }
 
@@ -57,9 +61,9 @@ class WhatsappBotController extends Controller
     {
         $this->authorizeAdmin();
 
-        $result = $this->botRequest('get', $this->endpoint('qr'));
+        $result = $this->botService->getEndpoint('qr');
 
-        if (!$result['ok']) {
+        if (! $result['ok']) {
             return response()->json($result, 422);
         }
 
@@ -69,11 +73,11 @@ class WhatsappBotController extends Controller
         ]);
     }
 
-    public function restart(Request $request): JsonResponse
+    public function restart(): JsonResponse
     {
         $this->authorizeAdmin();
 
-        $result = $this->botRequest('post', $this->endpoint('restart'));
+        $result = $this->botService->postEndpoint('restart');
 
         return response()->json($result, $result['ok'] ? 200 : 422);
     }
@@ -82,7 +86,7 @@ class WhatsappBotController extends Controller
     {
         $this->authorizeAdmin();
 
-        $result = $this->botRequest('post', $this->endpoint('logout'));
+        $result = $this->botService->postEndpoint('logout');
 
         return response()->json($result, $result['ok'] ? 200 : 422);
     }
@@ -100,9 +104,9 @@ class WhatsappBotController extends Controller
     {
         $this->authorizeAdmin();
 
-        $eventsEndpoint = $this->endpoint('events');
-        $statusEndpoint = $this->endpoint('status');
-        $qrEndpoint     = $this->endpoint('qr');
+        $eventsEndpoint = $this->botService->firstEndpointUrl('events');
+        $statusEndpoint = $this->botService->firstEndpointUrl('status');
+        $qrEndpoint = $this->botService->firstEndpointUrl('qr');
 
         return response()->stream(function () use ($eventsEndpoint, $statusEndpoint, $qrEndpoint) {
             // Disable PHP execution time limit for this long-running SSE stream.
@@ -116,16 +120,17 @@ class WhatsappBotController extends Controller
             // If the bot exposes a native SSE /events endpoint, proxy it.
             if (filled($eventsEndpoint)) {
                 $this->proxyEventStream($eventsEndpoint);
+
                 return;
             }
 
             // Otherwise synthesise SSE events by polling status + QR.
             $this->pollingSseLoop($statusEndpoint, $qrEndpoint);
         }, 200, [
-            'Content-Type'      => 'text/event-stream',
-            'Cache-Control'     => 'no-cache, no-store',
+            'Content-Type' => 'text/event-stream',
+            'Cache-Control' => 'no-cache, no-store',
             'X-Accel-Buffering' => 'no',
-            'Connection'        => 'keep-alive',
+            'Connection' => 'keep-alive',
         ]);
     }
 
@@ -138,12 +143,12 @@ class WhatsappBotController extends Controller
 
         $headers = ['Accept' => 'text/event-stream'];
         if (filled($token)) {
-            $headers['Authorization'] = 'Bearer ' . $token;
+            $headers['Authorization'] = 'Bearer '.$token;
         }
 
         $context = stream_context_create(['http' => [
-            'method'  => 'GET',
-            'header'  => collect($headers)
+            'method' => 'GET',
+            'header' => collect($headers)
                 ->map(fn ($v, $k) => "$k: $v")
                 ->implode("\r\n"),
             'timeout' => 60,
@@ -151,15 +156,16 @@ class WhatsappBotController extends Controller
 
         $stream = @fopen($url, 'r', false, $context);
 
-        if (!$stream) {
+        if (! $stream) {
             echo "event: error\ndata: {\"message\":\"Tidak dapat membuka stream dari bot service.\"}\n\n";
             flush();
+
             return;
         }
 
         $deadline = time() + 55; // close just before nginx/LB timeout
 
-        while (!feof($stream) && time() < $deadline && !connection_aborted()) {
+        while (! feof($stream) && time() < $deadline && ! connection_aborted()) {
             $line = fgets($stream, 4096);
             if ($line !== false) {
                 echo $line;
@@ -175,16 +181,16 @@ class WhatsappBotController extends Controller
      */
     private function pollingSseLoop(?string $statusEndpoint, ?string $qrEndpoint): void
     {
-        $deadline     = time() + 55;
-        $lastQrHash   = null;
+        $deadline = time() + 55;
+        $lastQrHash = null;
         $wasConnected = null;
 
-        while (time() < $deadline && !connection_aborted()) {
+        while (time() < $deadline && ! connection_aborted()) {
             $payload = [];
 
             // --- Status ---
             if (filled($statusEndpoint)) {
-                $statusResult = $this->botRequest('get', $statusEndpoint);
+                $statusResult = $this->botService->getEndpoint('status');
                 if ($statusResult['ok']) {
                     $normalized = $this->normalizeStatus($statusResult['data']);
                     $payload['status'] = $normalized;
@@ -192,15 +198,15 @@ class WhatsappBotController extends Controller
                     $connected = $normalized['connected'];
 
                     // Send QR when just disconnected or on first check.
-                    if (filled($qrEndpoint) && (!$connected || $wasConnected === null)) {
-                        $qrResult = $this->botRequest('get', $qrEndpoint);
+                    if (filled($qrEndpoint) && (! $connected || $wasConnected === null)) {
+                        $qrResult = $this->botService->getEndpoint('qr');
                         if ($qrResult['ok']) {
-                            $qrData  = $this->normalizeQr($qrResult);
-                            $qrHash  = md5(($qrData['qrImage'] ?? '') . ($qrData['qrText'] ?? ''));
+                            $qrData = $this->normalizeQr($qrResult);
+                            $qrHash = md5(($qrData['qrImage'] ?? '').($qrData['qrText'] ?? ''));
 
                             if ($qrHash !== $lastQrHash) {
                                 $lastQrHash = $qrHash;
-                                $payload    = array_merge($payload, $qrData);
+                                $payload = array_merge($payload, $qrData);
                             }
                         }
                     }
@@ -209,9 +215,9 @@ class WhatsappBotController extends Controller
                 }
             }
 
-            if (!empty($payload)) {
+            if (! empty($payload)) {
                 echo "event: status\n";
-                echo 'data: ' . json_encode($payload) . "\n\n";
+                echo 'data: '.json_encode($payload)."\n\n";
                 flush();
             } else {
                 // Heartbeat to keep the connection alive.
@@ -226,70 +232,6 @@ class WhatsappBotController extends Controller
     private function authorizeAdmin(): void
     {
         abort_unless(auth()->user()?->role === 'admin', 403);
-    }
-
-    private function endpoint(string $name): ?string
-    {
-        $configured = config("services.whatsapp_bot.{$name}_url");
-
-        if (filled($configured)) {
-            return $configured;
-        }
-
-        $baseUrl = config('services.whatsapp_bot.base_url');
-
-        if (blank($baseUrl)) {
-            return null;
-        }
-
-        return rtrim($baseUrl, '/') . '/' . $name;
-    }
-
-    private function botRequest(string $method, ?string $url): array
-    {
-        if (blank($url)) {
-            return [
-                'ok' => false,
-                'message' => 'Endpoint bot WA belum dikonfigurasi untuk fitur ini.',
-            ];
-        }
-
-        $request = Http::timeout(15)->accept('*/*');
-        $token = config('services.whatsapp_bot.token');
-
-        if (filled($token)) {
-            $request = $request->withToken($token);
-        }
-
-        try {
-            $response = $request->{$method}($url);
-        } catch (ConnectionException $exception) {
-            return [
-                'ok' => false,
-                'message' => 'Gagal menghubungi service bot WA: ' . $exception->getMessage(),
-            ];
-        }
-
-        if ($response->failed()) {
-            return [
-                'ok' => false,
-                'message' => 'Service bot WA menolak request. Status HTTP: ' . $response->status(),
-            ];
-        }
-
-        $contentType = $response->header('content-type', '');
-        $body = $response->body();
-        $data = str_contains($contentType, 'application/json')
-            ? $response->json()
-            : $body;
-
-        return [
-            'ok' => true,
-            'message' => 'ok',
-            'data' => $data,
-            'contentType' => $contentType,
-            'body' => $body,
-        ];
     }
 
     private function normalizeStatus(mixed $data): array
@@ -315,13 +257,13 @@ class WhatsappBotController extends Controller
     private function normalizeQr(array $result): array
     {
         $contentType = strtolower($result['contentType'] ?? '');
-        $body        = (string) ($result['body'] ?? '');
+        $body = (string) ($result['body'] ?? '');
 
         // Bot responded with a raw image (PNG/JPEG/SVG as binary).
         if (str_starts_with($contentType, 'image/')) {
             return [
-                'qrImage' => 'data:' . $contentType . ';base64,' . base64_encode($body),
-                'qrText'  => null,
+                'qrImage' => 'data:'.$contentType.';base64,'.base64_encode($body),
+                'qrText' => null,
             ];
         }
 
@@ -348,7 +290,7 @@ class WhatsappBotController extends Controller
             ];
             foreach ($qrFields as $field) {
                 $value = data_get($data, $field);
-                if (!is_string($value)) {
+                if (! is_string($value)) {
                     continue;
                 }
                 if ($this->looksLikeImage($value)) {
@@ -368,6 +310,7 @@ class WhatsappBotController extends Controller
             if ($this->looksLikeImage($trimmed)) {
                 return ['qrImage' => $this->normalizeImageValue($trimmed), 'qrText' => null];
             }
+
             return ['qrImage' => null, 'qrText' => $trimmed];
         }
 
@@ -393,9 +336,9 @@ class WhatsappBotController extends Controller
         }
 
         if (str_starts_with($value, '<svg')) {
-            return 'data:image/svg+xml;base64,' . base64_encode($value);
+            return 'data:image/svg+xml;base64,'.base64_encode($value);
         }
 
-        return 'data:image/png;base64,' . $value;
+        return 'data:image/png;base64,'.$value;
     }
 }

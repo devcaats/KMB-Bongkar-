@@ -63,7 +63,9 @@ export default function LaporanMuat({ deliveryOrders = [], loadReports = [] }) {
 
     const handleDelete = () => {
         if (!deleteTarget) return;
-        router.delete(route("driver.muat.destroy", deleteTarget.id), {
+        router.post(route("driver.muat.destroy.post", deleteTarget.id), {
+            _method: "delete",
+        }, {
             preserveState: true,
             onSuccess: () => {
                 setPopupState({
@@ -654,7 +656,7 @@ export default function LaporanMuat({ deliveryOrders = [], loadReports = [] }) {
                                                     type="button"
                                                     onClick={() =>
                                                         setViewingPhoto(
-                                                            `/storage/${editingReport.photo_required_path}`,
+                                                            editingReport.photo_required_url,
                                                         )
                                                     }
                                                     className="text-[10px] font-bold text-brand-600 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-350"
@@ -750,7 +752,7 @@ export default function LaporanMuat({ deliveryOrders = [], loadReports = [] }) {
                                                     type="button"
                                                     onClick={() =>
                                                         setViewingPhoto(
-                                                            `/storage/${editingReport.photo_optional_path}`,
+                                                            editingReport.photo_optional_url,
                                                         )
                                                     }
                                                     className="text-[10px] font-bold text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
@@ -1011,7 +1013,7 @@ export default function LaporanMuat({ deliveryOrders = [], loadReports = [] }) {
                                                             type="button"
                                                             onClick={() =>
                                                                 setViewingPhoto(
-                                                                    `/storage/${report.photo_required_path}`,
+                                                                    report.photo_required_url,
                                                                 )
                                                             }
                                                             className="inline-flex items-center gap-1 text-xs font-semibold text-brand-600 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-350 bg-brand-50 dark:bg-brand-500/10 px-2 py-1 rounded-lg w-max"
@@ -1043,7 +1045,7 @@ export default function LaporanMuat({ deliveryOrders = [], loadReports = [] }) {
                                                             type="button"
                                                             onClick={() =>
                                                                 setViewingPhoto(
-                                                                    `/storage/${report.photo_optional_path}`,
+                                                                    report.photo_optional_url,
                                                                 )
                                                             }
                                                             className="inline-flex items-center gap-1 text-xs font-semibold text-gray-655 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 bg-gray-50 dark:bg-white/[0.04] px-2 py-1 rounded-lg w-max"

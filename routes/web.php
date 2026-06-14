@@ -190,10 +190,18 @@ Route::middleware('auth')->group(function () {
     Route::get('/laporan-muat', [DriverController::class, 'laporanMuat'])->name('driver.muat');
     Route::post('/laporan-muat', [DriverController::class, 'storeLaporanMuat'])->name('driver.muat.store');
     Route::post('/laporan-muat/{loadReport}', [DriverController::class, 'updateLaporanMuat'])->name('driver.muat.update');
+    Route::get('/laporan-muat/{loadReport}/foto/{type}', [DriverController::class, 'showLaporanMuatPhoto'])
+        ->whereIn('type', ['required', 'optional'])
+        ->name('driver.muat.photo');
+    Route::post('/laporan-muat/{loadReport}/hapus', [DriverController::class, 'destroyLaporanMuat'])->name('driver.muat.destroy.post');
     Route::delete('/laporan-muat/{loadReport}', [DriverController::class, 'destroyLaporanMuat'])->name('driver.muat.destroy');
     Route::get('/laporan-bongkar', [DriverController::class, 'laporanBongkar'])->name('driver.bongkar');
     Route::post('/laporan-bongkar', [DriverController::class, 'storeLaporanBongkar'])->name('driver.bongkar.store');
     Route::post('/laporan-bongkar/{unloadReport}', [DriverController::class, 'updateLaporanBongkar'])->name('driver.bongkar.update');
+    Route::get('/laporan-bongkar/{unloadReport}/foto/{type}', [DriverController::class, 'showLaporanBongkarPhoto'])
+        ->whereIn('type', ['required', 'optional'])
+        ->name('driver.bongkar.photo');
+    Route::post('/laporan-bongkar/{unloadReport}/hapus', [DriverController::class, 'destroyLaporanBongkar'])->name('driver.bongkar.destroy.post');
     Route::delete('/laporan-bongkar/{unloadReport}', [DriverController::class, 'destroyLaporanBongkar'])->name('driver.bongkar.destroy');
     Route::get('/maintenance-unit', [DriverController::class, 'maintenanceUnit'])->name('driver.maintenance');
     Route::post('/maintenance-unit', [DriverController::class, 'storeMaintenanceUnit'])->name('driver.maintenance.store');
