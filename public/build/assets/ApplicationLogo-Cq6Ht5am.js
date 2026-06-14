@@ -1,1 +1,0 @@
-import{r as e}from"./app-Cy-Sjd-F.js";var t=e();function n(e){return(0,t.jsx)(`img`,{src:`/icon/icon.svg`,alt:`Application Logo`,...e})}export{n as t};
