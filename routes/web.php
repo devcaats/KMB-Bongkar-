@@ -7,6 +7,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RincianDeliveryOrderController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\WhatsappBotController;
+use App\Models\ActivityLog;
 use App\Models\DeliveryOrder;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
@@ -33,18 +34,18 @@ Route::get('/', function () {
                     ? $order->created_at->toDateString()
                     : now()->toDateString();
 
-                if (!isset($statsByDate[$date])) {
+                if (! isset($statsByDate[$date])) {
                     $statsByDate[$date] = [
-                        'tanggal'       => $date,
-                        'netto_muat'    => 0,
+                        'tanggal' => $date,
+                        'netto_muat' => 0,
                         'netto_bongkar' => 0,
-                        'susut'         => 0,
-                        'surplus'       => 0,
-                        'selisih'       => null,
-                        'status'        => null,
-                        'nomor_do'      => [],
-                        'has_muat'      => false,
-                        'has_bongkar'   => false,
+                        'susut' => 0,
+                        'surplus' => 0,
+                        'selisih' => null,
+                        'status' => null,
+                        'nomor_do' => [],
+                        'has_muat' => false,
+                        'has_bongkar' => false,
                     ];
                 }
 
@@ -101,7 +102,7 @@ Route::get('/', function () {
         if ($user->role === 'driver') {
             $driverId = $user->id;
 
-            $logs = \App\Models\ActivityLog::where('user_id', $driverId)
+            $logs = ActivityLog::where('user_id', $driverId)
                 ->orderBy('created_at', 'desc')
                 ->take(5)
                 ->get();
@@ -109,8 +110,8 @@ Route::get('/', function () {
             $stats = $buildDoStatistics($driverId);
 
             return Inertia::render('Dashboard', [
-                'recent_logs'      => $logs,
-                'driver_stats'     => $stats->sortByDesc('tanggal')->values(),
+                'recent_logs' => $logs,
+                'driver_stats' => $stats->sortByDesc('tanggal')->values(),
                 'statistics_chart' => $buildStatisticsChart($stats),
             ]);
         }

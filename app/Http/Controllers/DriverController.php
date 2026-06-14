@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\ActivityLog;
+use App\Models\DeliveryOrder;
 use App\Models\LoadReport;
 use App\Models\UnloadReport;
 use Illuminate\Http\RedirectResponse;
@@ -17,13 +18,13 @@ class DriverController extends Controller
     public function laporanMuat(): Response
     {
         $driverId = auth()->id();
-        
+
         // Find reported DO IDs
         $reportedDoIds = LoadReport::where('driver_id', $driverId)
             ->pluck('delivery_order_id')
             ->toArray();
 
-        $dos = \App\Models\DeliveryOrder::where('driver_id', $driverId)
+        $dos = DeliveryOrder::where('driver_id', $driverId)
             ->whereNotIn('id', $reportedDoIds)
             ->orderBy('created_at', 'desc')
             ->get(['id', 'nomor_do', 'nomor_unit']);
@@ -35,38 +36,38 @@ class DriverController extends Controller
 
         return Inertia::render('Driver/LaporanMuat', [
             'deliveryOrders' => $dos,
-            'loadReports'    => $reports,
+            'loadReports' => $reports,
         ]);
     }
 
     public function storeLaporanMuat(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'do_id'          => ['required', 'exists:delivery_orders,id', 'unique:load_reports,delivery_order_id'],
-            'load_date'      => ['required', 'date'],
-            'bruto'          => ['required', 'numeric', 'min:0'],
-            'tara'           => ['required', 'numeric', 'min:0', 'lt:bruto'],
+            'do_id' => ['required', 'exists:delivery_orders,id', 'unique:load_reports,delivery_order_id'],
+            'load_date' => ['required', 'date'],
+            'bruto' => ['required', 'numeric', 'min:0'],
+            'tara' => ['required', 'numeric', 'min:0', 'lt:bruto'],
             'photo_required' => ['required', 'file', 'image', 'max:2048'],
             'photo_optional' => ['nullable', 'file', 'image', 'max:2048'],
-            'notes'          => ['nullable', 'string', 'max:500'],
+            'notes' => ['nullable', 'string', 'max:500'],
         ], [
-            'do_id.required'          => 'Nomor DO wajib dipilih.',
-            'do_id.exists'            => 'DO tidak valid.',
-            'do_id.unique'            => 'Laporan muat untuk DO ini sudah pernah dikirim.',
-            'load_date.required'      => 'Tanggal muat wajib diisi.',
-            'load_date.date'          => 'Format tanggal muat tidak valid.',
-            'bruto.required'          => 'Berat bruto wajib diisi.',
-            'bruto.numeric'           => 'Berat bruto harus berupa angka.',
-            'bruto.min'               => 'Berat bruto tidak boleh negatif.',
-            'tara.required'           => 'Berat tara wajib diisi.',
-            'tara.numeric'            => 'Berat tara harus berupa angka.',
-            'tara.min'                => 'Berat tara tidak boleh negatif.',
-            'tara.lt'                 => 'Berat tara harus lebih kecil dari bruto.',
+            'do_id.required' => 'Nomor DO wajib dipilih.',
+            'do_id.exists' => 'DO tidak valid.',
+            'do_id.unique' => 'Laporan muat untuk DO ini sudah pernah dikirim.',
+            'load_date.required' => 'Tanggal muat wajib diisi.',
+            'load_date.date' => 'Format tanggal muat tidak valid.',
+            'bruto.required' => 'Berat bruto wajib diisi.',
+            'bruto.numeric' => 'Berat bruto harus berupa angka.',
+            'bruto.min' => 'Berat bruto tidak boleh negatif.',
+            'tara.required' => 'Berat tara wajib diisi.',
+            'tara.numeric' => 'Berat tara harus berupa angka.',
+            'tara.min' => 'Berat tara tidak boleh negatif.',
+            'tara.lt' => 'Berat tara harus lebih kecil dari bruto.',
             'photo_required.required' => 'Foto bukti muat wajib diunggah.',
-            'photo_required.image'    => 'File bukti muat harus berupa gambar (jpg, png, dsb).',
-            'photo_required.max'      => 'Ukuran foto maksimal 2MB.',
-            'photo_optional.image'    => 'File tambahan harus berupa gambar (jpg, png, dsb).',
-            'photo_optional.max'      => 'Ukuran file tambahan maksimal 2MB.',
+            'photo_required.image' => 'File bukti muat harus berupa gambar (jpg, png, dsb).',
+            'photo_required.max' => 'Ukuran foto maksimal 2MB.',
+            'photo_optional.image' => 'File tambahan harus berupa gambar (jpg, png, dsb).',
+            'photo_optional.max' => 'Ukuran file tambahan maksimal 2MB.',
         ]);
 
         $photoRequiredPath = null;
@@ -79,26 +80,26 @@ class DriverController extends Controller
             $photoOptionalPath = $request->file('photo_optional')->store('reports/loads', 'public');
         }
 
-        $do = \App\Models\DeliveryOrder::findOrFail($validated['do_id']);
+        $do = DeliveryOrder::findOrFail($validated['do_id']);
         $netto = $validated['bruto'] - $validated['tara'];
 
         // Save load report
         LoadReport::create([
-            'driver_id'           => auth()->id(),
-            'delivery_order_id'   => $do->id,
-            'load_date'           => $validated['load_date'],
-            'bruto'               => $validated['bruto'],
-            'tara'                => $validated['tara'],
-            'netto'               => $netto,
+            'driver_id' => auth()->id(),
+            'delivery_order_id' => $do->id,
+            'load_date' => $validated['load_date'],
+            'bruto' => $validated['bruto'],
+            'tara' => $validated['tara'],
+            'netto' => $netto,
             'photo_required_path' => $photoRequiredPath,
             'photo_optional_path' => $photoOptionalPath,
-            'notes'               => $validated['notes'],
+            'notes' => $validated['notes'],
         ]);
 
         ActivityLog::create([
-            'user_id'  => auth()->id(),
+            'user_id' => auth()->id(),
             'activity' => 'Laporan Muat',
-            'details'  => 'Mengirim laporan muat untuk DO #' . $do->nomor_do . ' (' . $do->nomor_unit . ') - Bruto: ' . $validated['bruto'] . ' kg, Tara: ' . $validated['tara'] . ' kg, Netto: ' . $netto . ' kg pada ' . $validated['load_date'] . ($photoOptionalPath ? ' (dengan file lampiran tambahan)' : ''),
+            'details' => 'Mengirim laporan muat untuk DO #'.$do->nomor_do.' ('.$do->nomor_unit.') - Bruto: '.$validated['bruto'].' kg, Tara: '.$validated['tara'].' kg, Netto: '.$netto.' kg pada '.$validated['load_date'].($photoOptionalPath ? ' (dengan file lampiran tambahan)' : ''),
         ]);
 
         return back()->with('success', 'Laporan muat berhasil dikirim!');
@@ -111,34 +112,34 @@ class DriverController extends Controller
         }
 
         $validated = $request->validate([
-            'load_date'      => ['required', 'date'],
-            'bruto'          => ['required', 'numeric', 'min:0'],
-            'tara'           => ['required', 'numeric', 'min:0', 'lt:bruto'],
+            'load_date' => ['required', 'date'],
+            'bruto' => ['required', 'numeric', 'min:0'],
+            'tara' => ['required', 'numeric', 'min:0', 'lt:bruto'],
             'photo_required' => ['nullable', 'file', 'image', 'max:2048'],
             'photo_optional' => ['nullable', 'file', 'image', 'max:2048'],
-            'notes'          => ['nullable', 'string', 'max:500'],
+            'notes' => ['nullable', 'string', 'max:500'],
         ], [
-            'load_date.required'      => 'Tanggal muat wajib diisi.',
-            'load_date.date'          => 'Format tanggal muat tidak valid.',
-            'bruto.required'          => 'Berat bruto wajib diisi.',
-            'bruto.numeric'           => 'Berat bruto harus berupa angka.',
-            'bruto.min'               => 'Berat bruto tidak boleh negatif.',
-            'tara.required'           => 'Berat tara wajib diisi.',
-            'tara.numeric'            => 'Berat tara harus berupa angka.',
-            'tara.min'                => 'Berat tara tidak boleh negatif.',
-            'tara.lt'                 => 'Berat tara harus lebih kecil dari bruto.',
-            'photo_required.image'    => 'File bukti muat harus berupa gambar (jpg, png, dsb).',
-            'photo_required.max'      => 'Ukuran foto maksimal 2MB.',
-            'photo_optional.image'    => 'File tambahan harus berupa gambar (jpg, png, dsb).',
-            'photo_optional.max'      => 'Ukuran file tambahan maksimal 2MB.',
+            'load_date.required' => 'Tanggal muat wajib diisi.',
+            'load_date.date' => 'Format tanggal muat tidak valid.',
+            'bruto.required' => 'Berat bruto wajib diisi.',
+            'bruto.numeric' => 'Berat bruto harus berupa angka.',
+            'bruto.min' => 'Berat bruto tidak boleh negatif.',
+            'tara.required' => 'Berat tara wajib diisi.',
+            'tara.numeric' => 'Berat tara harus berupa angka.',
+            'tara.min' => 'Berat tara tidak boleh negatif.',
+            'tara.lt' => 'Berat tara harus lebih kecil dari bruto.',
+            'photo_required.image' => 'File bukti muat harus berupa gambar (jpg, png, dsb).',
+            'photo_required.max' => 'Ukuran foto maksimal 2MB.',
+            'photo_optional.image' => 'File tambahan harus berupa gambar (jpg, png, dsb).',
+            'photo_optional.max' => 'Ukuran file tambahan maksimal 2MB.',
         ]);
 
         $updateData = [
             'load_date' => $validated['load_date'],
-            'bruto'     => $validated['bruto'],
-            'tara'      => $validated['tara'],
-            'netto'     => $validated['bruto'] - $validated['tara'],
-            'notes'     => $validated['notes'],
+            'bruto' => $validated['bruto'],
+            'tara' => $validated['tara'],
+            'netto' => $validated['bruto'] - $validated['tara'],
+            'notes' => $validated['notes'],
         ];
 
         // Handle required photo replacement
@@ -160,9 +161,9 @@ class DriverController extends Controller
         $loadReport->update($updateData);
 
         ActivityLog::create([
-            'user_id'  => auth()->id(),
+            'user_id' => auth()->id(),
             'activity' => 'Edit Laporan Muat',
-            'details'  => 'Mengedit laporan muat untuk DO #' . $loadReport->deliveryOrder->nomor_do . ' (' . $loadReport->deliveryOrder->nomor_unit . ')',
+            'details' => 'Mengedit laporan muat untuk DO #'.$loadReport->deliveryOrder->nomor_do.' ('.$loadReport->deliveryOrder->nomor_unit.')',
         ]);
 
         return back()->with('success', 'Laporan muat berhasil diperbarui!');
@@ -187,9 +188,9 @@ class DriverController extends Controller
         $loadReport->delete();
 
         ActivityLog::create([
-            'user_id'  => auth()->id(),
+            'user_id' => auth()->id(),
             'activity' => 'Hapus Laporan Muat',
-            'details'  => 'Menghapus laporan muat untuk DO #' . $doNumber,
+            'details' => 'Menghapus laporan muat untuk DO #'.$doNumber,
         ]);
 
         return back()->with('success', 'Laporan muat berhasil dihapus.');
@@ -221,7 +222,7 @@ class DriverController extends Controller
             ->toArray();
 
         // Available DOs = have load report but NOT yet unloaded
-        $dos = \App\Models\DeliveryOrder::where('driver_id', $driverId)
+        $dos = DeliveryOrder::where('driver_id', $driverId)
             ->whereIn('id', $reportedDoIds)
             ->whereNotIn('id', $unloadedDoIds)
             ->orderBy('created_at', 'desc')
@@ -232,7 +233,7 @@ class DriverController extends Controller
             ->whereIn('delivery_order_id', $reportedDoIds)
             ->get(['delivery_order_id', 'netto']);
 
-        $nettoMuatByDo = $loadReports->keyBy('delivery_order_id')->map(fn($r) => $r->netto);
+        $nettoMuatByDo = $loadReports->keyBy('delivery_order_id')->map(fn ($r) => $r->netto);
 
         // Unload reports history
         $reports = UnloadReport::where('driver_id', $driverId)
@@ -242,43 +243,43 @@ class DriverController extends Controller
 
         return Inertia::render('Driver/LaporanBongkar', [
             'deliveryOrders' => $dos,
-            'nettoMuatByDo'  => $nettoMuatByDo,
-            'unloadReports'  => $reports,
+            'nettoMuatByDo' => $nettoMuatByDo,
+            'unloadReports' => $reports,
         ]);
     }
 
     public function storeLaporanBongkar(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'do_id'          => ['required', 'exists:delivery_orders,id', 'unique:unload_reports,delivery_order_id'],
-            'unload_date'    => ['required', 'date'],
-            'bruto'          => ['required', 'numeric', 'min:0'],
-            'tara'           => ['required', 'numeric', 'min:0', 'lt:bruto'],
+            'do_id' => ['required', 'exists:delivery_orders,id', 'unique:unload_reports,delivery_order_id'],
+            'unload_date' => ['required', 'date'],
+            'bruto' => ['required', 'numeric', 'min:0'],
+            'tara' => ['required', 'numeric', 'min:0', 'lt:bruto'],
             'photo_required' => ['required', 'file', 'image', 'max:2048'],
             'photo_optional' => ['nullable', 'file', 'image', 'max:2048'],
-            'notes'          => ['nullable', 'string', 'max:500'],
+            'notes' => ['nullable', 'string', 'max:500'],
         ], [
-            'do_id.required'          => 'Nomor DO wajib dipilih.',
-            'do_id.exists'            => 'DO tidak valid.',
-            'do_id.unique'            => 'Laporan bongkar untuk DO ini sudah pernah dikirim.',
-            'unload_date.required'    => 'Tanggal bongkar wajib diisi.',
-            'unload_date.date'        => 'Format tanggal bongkar tidak valid.',
-            'bruto.required'          => 'Berat bruto wajib diisi.',
-            'bruto.numeric'           => 'Berat bruto harus berupa angka.',
-            'bruto.min'               => 'Berat bruto tidak boleh negatif.',
-            'tara.required'           => 'Berat tara wajib diisi.',
-            'tara.numeric'            => 'Berat tara harus berupa angka.',
-            'tara.min'                => 'Berat tara tidak boleh negatif.',
-            'tara.lt'                 => 'Berat tara harus lebih kecil dari bruto.',
+            'do_id.required' => 'Nomor DO wajib dipilih.',
+            'do_id.exists' => 'DO tidak valid.',
+            'do_id.unique' => 'Laporan bongkar untuk DO ini sudah pernah dikirim.',
+            'unload_date.required' => 'Tanggal bongkar wajib diisi.',
+            'unload_date.date' => 'Format tanggal bongkar tidak valid.',
+            'bruto.required' => 'Berat bruto wajib diisi.',
+            'bruto.numeric' => 'Berat bruto harus berupa angka.',
+            'bruto.min' => 'Berat bruto tidak boleh negatif.',
+            'tara.required' => 'Berat tara wajib diisi.',
+            'tara.numeric' => 'Berat tara harus berupa angka.',
+            'tara.min' => 'Berat tara tidak boleh negatif.',
+            'tara.lt' => 'Berat tara harus lebih kecil dari bruto.',
             'photo_required.required' => 'Foto bukti bongkar wajib diunggah.',
-            'photo_required.image'    => 'File bukti bongkar harus berupa gambar (jpg, png, dsb).',
-            'photo_required.max'      => 'Ukuran foto maksimal 2MB.',
-            'photo_optional.image'    => 'File tambahan harus berupa gambar (jpg, png, dsb).',
-            'photo_optional.max'      => 'Ukuran file tambahan maksimal 2MB.',
+            'photo_required.image' => 'File bukti bongkar harus berupa gambar (jpg, png, dsb).',
+            'photo_required.max' => 'Ukuran foto maksimal 2MB.',
+            'photo_optional.image' => 'File tambahan harus berupa gambar (jpg, png, dsb).',
+            'photo_optional.max' => 'Ukuran file tambahan maksimal 2MB.',
         ]);
 
         $driverId = auth()->id();
-        $do = \App\Models\DeliveryOrder::findOrFail($validated['do_id']);
+        $do = DeliveryOrder::findOrFail($validated['do_id']);
 
         $netto = $validated['bruto'] - $validated['tara'];
 
@@ -296,23 +297,23 @@ class DriverController extends Controller
             : null;
 
         UnloadReport::create([
-            'driver_id'           => $driverId,
-            'delivery_order_id'   => $do->id,
-            'unload_date'         => $validated['unload_date'],
-            'bruto'               => $validated['bruto'],
-            'tara'                => $validated['tara'],
-            'netto'               => $netto,
-            'selisih'             => $selisih,
-            'status_selisih'      => $statusSelisih,
+            'driver_id' => $driverId,
+            'delivery_order_id' => $do->id,
+            'unload_date' => $validated['unload_date'],
+            'bruto' => $validated['bruto'],
+            'tara' => $validated['tara'],
+            'netto' => $netto,
+            'selisih' => $selisih,
+            'status_selisih' => $statusSelisih,
             'photo_required_path' => $photoRequiredPath,
             'photo_optional_path' => $photoOptionalPath,
-            'notes'               => $validated['notes'],
+            'notes' => $validated['notes'],
         ]);
 
         ActivityLog::create([
-            'user_id'  => $driverId,
+            'user_id' => $driverId,
             'activity' => 'Laporan Bongkar',
-            'details'  => 'Mengirim laporan bongkar DO #' . $do->nomor_do . ' (' . $do->nomor_unit . ') - Bruto: ' . $validated['bruto'] . ' kg, Tara: ' . $validated['tara'] . ' kg, Netto: ' . $netto . ' kg, Selisih: ' . ($selisih >= 0 ? '+' : '') . $selisih . ' kg (' . $statusSelisih . ')',
+            'details' => 'Mengirim laporan bongkar DO #'.$do->nomor_do.' ('.$do->nomor_unit.') - Bruto: '.$validated['bruto'].' kg, Tara: '.$validated['tara'].' kg, Netto: '.$netto.' kg, Selisih: '.($selisih >= 0 ? '+' : '').$selisih.' kg ('.$statusSelisih.')',
         ]);
 
         return back()->with('success', 'Laporan bongkar berhasil dikirim!');
@@ -325,17 +326,17 @@ class DriverController extends Controller
         }
 
         $validated = $request->validate([
-            'unload_date'    => ['required', 'date'],
-            'bruto'          => ['required', 'numeric', 'min:0'],
-            'tara'           => ['required', 'numeric', 'min:0', 'lt:bruto'],
+            'unload_date' => ['required', 'date'],
+            'bruto' => ['required', 'numeric', 'min:0'],
+            'tara' => ['required', 'numeric', 'min:0', 'lt:bruto'],
             'photo_required' => ['nullable', 'file', 'image', 'max:2048'],
             'photo_optional' => ['nullable', 'file', 'image', 'max:2048'],
-            'notes'          => ['nullable', 'string', 'max:500'],
+            'notes' => ['nullable', 'string', 'max:500'],
         ], [
             'unload_date.required' => 'Tanggal bongkar wajib diisi.',
-            'bruto.required'       => 'Berat bruto wajib diisi.',
-            'tara.required'        => 'Berat tara wajib diisi.',
-            'tara.lt'              => 'Berat tara harus lebih kecil dari bruto.',
+            'bruto.required' => 'Berat bruto wajib diisi.',
+            'tara.required' => 'Berat tara wajib diisi.',
+            'tara.lt' => 'Berat tara harus lebih kecil dari bruto.',
         ]);
 
         $netto = $validated['bruto'] - $validated['tara'];
@@ -348,13 +349,13 @@ class DriverController extends Controller
         $statusSelisih = $selisih > 0 ? 'surplus' : ($selisih < 0 ? 'susut' : 'pas');
 
         $updateData = [
-            'unload_date'    => $validated['unload_date'],
-            'bruto'          => $validated['bruto'],
-            'tara'           => $validated['tara'],
-            'netto'          => $netto,
-            'selisih'        => $selisih,
+            'unload_date' => $validated['unload_date'],
+            'bruto' => $validated['bruto'],
+            'tara' => $validated['tara'],
+            'netto' => $netto,
+            'selisih' => $selisih,
             'status_selisih' => $statusSelisih,
-            'notes'          => $validated['notes'],
+            'notes' => $validated['notes'],
         ];
 
         if ($request->hasFile('photo_required')) {
@@ -374,9 +375,9 @@ class DriverController extends Controller
         $unloadReport->update($updateData);
 
         ActivityLog::create([
-            'user_id'  => auth()->id(),
+            'user_id' => auth()->id(),
             'activity' => 'Edit Laporan Bongkar',
-            'details'  => 'Mengedit laporan bongkar untuk DO #' . $unloadReport->deliveryOrder->nomor_do . ' (' . $unloadReport->deliveryOrder->nomor_unit . ')',
+            'details' => 'Mengedit laporan bongkar untuk DO #'.$unloadReport->deliveryOrder->nomor_do.' ('.$unloadReport->deliveryOrder->nomor_unit.')',
         ]);
 
         return back()->with('success', 'Laporan bongkar berhasil diperbarui!');
@@ -400,9 +401,9 @@ class DriverController extends Controller
         $unloadReport->delete();
 
         ActivityLog::create([
-            'user_id'  => auth()->id(),
+            'user_id' => auth()->id(),
             'activity' => 'Hapus Laporan Bongkar',
-            'details'  => 'Menghapus laporan bongkar untuk DO #' . $doNumber,
+            'details' => 'Menghapus laporan bongkar untuk DO #'.$doNumber,
         ]);
 
         return back()->with('success', 'Laporan bongkar berhasil dihapus.');
@@ -439,9 +440,9 @@ class DriverController extends Controller
         ]);
 
         ActivityLog::create([
-            'user_id'  => auth()->id(),
+            'user_id' => auth()->id(),
             'activity' => 'Laporan Maintenance',
-            'details'  => 'Melaporkan maintenance unit ' . $validated['unit_plate'] . ' (' . $validated['type'] . ', Prioritas: ' . $validated['priority'] . '): ' . $validated['description'],
+            'details' => 'Melaporkan maintenance unit '.$validated['unit_plate'].' ('.$validated['type'].', Prioritas: '.$validated['priority'].'): '.$validated['description'],
         ]);
 
         return back()->with('success', 'Laporan maintenance berhasil dikirim!');
