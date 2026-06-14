@@ -52,6 +52,21 @@ class DriverReportPhotoAccessTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_finance_can_view_driver_load_report_photo(): void
+    {
+        Storage::fake('public');
+        Storage::disk('public')->put('reports/loads/proof.jpg', 'photo-content');
+
+        $report = $this->createLoadReport([
+            'photo_required_path' => 'reports/loads/proof.jpg',
+        ]);
+        $finance = User::factory()->create(['role' => 'finance']);
+
+        $this->actingAs($finance)
+            ->get(route('driver.muat.photo', [$report, 'required']))
+            ->assertOk();
+    }
+
     public function test_load_report_can_be_deleted_with_post_fallback_route(): void
     {
         Storage::fake('public');

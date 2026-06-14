@@ -107,7 +107,7 @@ class DriverController extends Controller
 
     public function updateLaporanMuat(Request $request, LoadReport $loadReport): RedirectResponse
     {
-        if ($loadReport->driver_id !== auth()->id()) {
+        if (! $this->canAccessDriverReport($loadReport->driver_id)) {
             abort(403);
         }
 
@@ -171,7 +171,7 @@ class DriverController extends Controller
 
     public function destroyLaporanMuat(LoadReport $loadReport): RedirectResponse
     {
-        if ($loadReport->driver_id !== auth()->id()) {
+        if (! $this->canAccessDriverReport($loadReport->driver_id)) {
             abort(403);
         }
 
@@ -198,7 +198,7 @@ class DriverController extends Controller
 
     public function showLaporanMuatPhoto(LoadReport $loadReport, string $type): StreamedResponse
     {
-        if ($loadReport->driver_id !== auth()->id() && auth()->user()?->role !== 'admin') {
+        if (! $this->canAccessDriverReport($loadReport->driver_id)) {
             abort(403);
         }
 
@@ -321,7 +321,7 @@ class DriverController extends Controller
 
     public function updateLaporanBongkar(Request $request, UnloadReport $unloadReport): RedirectResponse
     {
-        if ($unloadReport->driver_id !== auth()->id()) {
+        if (! $this->canAccessDriverReport($unloadReport->driver_id)) {
             abort(403);
         }
 
@@ -385,7 +385,7 @@ class DriverController extends Controller
 
     public function destroyLaporanBongkar(UnloadReport $unloadReport): RedirectResponse
     {
-        if ($unloadReport->driver_id !== auth()->id()) {
+        if (! $this->canAccessDriverReport($unloadReport->driver_id)) {
             abort(403);
         }
 
@@ -411,7 +411,7 @@ class DriverController extends Controller
 
     public function showLaporanBongkarPhoto(UnloadReport $unloadReport, string $type): StreamedResponse
     {
-        if ($unloadReport->driver_id !== auth()->id() && auth()->user()?->role !== 'admin') {
+        if (! $this->canAccessDriverReport($unloadReport->driver_id)) {
             abort(403);
         }
 
@@ -459,6 +459,23 @@ class DriverController extends Controller
         abort_if(blank($path), 404);
 
         return $path;
+    }
+
+    private function canAccessDriverReport(int|string|null $driverId): bool
+    {
+        $user = auth()->user();
+
+        if (! $user) {
+            return false;
+        }
+
+        $role = strtolower(trim((string) $user->role));
+
+        if (filled($role) && $role !== 'driver') {
+            return true;
+        }
+
+        return (int) $driverId === (int) $user->id;
     }
 
     private function downloadReportPhoto(string $path): StreamedResponse

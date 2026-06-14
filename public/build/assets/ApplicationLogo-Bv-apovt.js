@@ -1,0 +1,1 @@
+import{r as e}from"./app-Cc4BqsKV.js";var t=e();function n(e){return(0,t.jsx)(`img`,{src:`/icon/icon.svg`,alt:`Application Logo`,...e})}export{n as t};
