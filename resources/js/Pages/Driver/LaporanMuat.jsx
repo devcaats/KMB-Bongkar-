@@ -63,9 +63,7 @@ export default function LaporanMuat({ deliveryOrders = [], loadReports = [] }) {
 
     const handleDelete = () => {
         if (!deleteTarget) return;
-        router.post(route("driver.muat.destroy.post", deleteTarget.id), {
-            _method: "delete",
-        }, {
+        router.post(route("driver.muat.destroy.post", deleteTarget.id), {}, {
             preserveState: true,
             onSuccess: () => {
                 setPopupState({

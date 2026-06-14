@@ -93,9 +93,7 @@ export default function LaporanBongkar({
     // ── Delete ──
     const handleDelete = () => {
         if (!deleteTarget) return;
-        router.post(route("driver.bongkar.destroy.post", deleteTarget.id), {
-            _method: "delete",
-        }, {
+        router.post(route("driver.bongkar.destroy.post", deleteTarget.id), {}, {
             preserveState: true,
             onSuccess: () => {
                 setPopupState({
